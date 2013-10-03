@@ -39,10 +39,10 @@ class CollectorService(service.Service):
     def initialize_service_hook(self, service):
         LOG.debug('initialize_service_hooks')
 
-        ack_on_error = False
+        ack_on_error = True
 
         exchange = "tasks"
-        topic = "queue_a"
+        topic = "notifications.*"
         try:
             self.conn.join_consumer_pool(
                 callback=self.process_notification,
