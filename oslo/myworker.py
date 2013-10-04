@@ -41,12 +41,13 @@ class CollectorService(service.Service):
 
         ack_on_error = True
 
-        exchange = "tasks"
+        exchange = "trs80"
+        queue_name = "notifications.info"
         topic = "notifications.*"
         try:
             self.conn.join_consumer_pool(
                 callback=self.process_notification,
-                pool_name=topic,
+                pool_name=queue_name,
                 topic=topic,
                 exchange_name=exchange,
                 ack_on_error=ack_on_error)
