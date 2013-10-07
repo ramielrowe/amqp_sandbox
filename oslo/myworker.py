@@ -1,12 +1,9 @@
 # -*- encoding: utf-8 -*-
 import eventlet
-import os
+import logging
 import socket
 import sys
 
-cwd = os.getcwd()
-
-sys.path.append(os.path.normpath(cwd))
 
 from oslo.config import cfg
 
@@ -29,10 +26,10 @@ cfg.CONF.register_opts([
 
 
 
-class CollectorService(service.Service):
+class MyWorkerService(service.Service):
 
     def start(self):
-        super(CollectorService, self).start()
+        super(MyWorkerService, self).start()
         # Add a dummy thread to have wait() working
         self.tg.add_timer(604800, lambda: None)
 
@@ -41,7 +38,7 @@ class CollectorService(service.Service):
 
         ack_on_error = True
 
-        exchange = "trs80"
+        exchange = cfg.CONF.control_exchange
         queue_name = "notifications.info"
         topic = "notifications.*"
         try:
@@ -56,24 +53,16 @@ class CollectorService(service.Service):
                           (topic, exchange))
 
     def process_notification(self, notification):
-        """RPC endpoint for notification messages
-
-        When another service sends a notification over the message
-        bus, this method receives it. See _setup_subscription().
-
-        """
-        LOG.debug('notification %r', notification.get('event_type'))
+        LOG.debug('Got notification %r', notification)
 
 
-def prepare_service(argv=None):
+def setup_service(argv=None):
     eventlet.monkey_patch()
+
+    # We can leave this as "openstack" default for simple stuff.
     rpc.set_defaults(control_exchange='worker')
     cfg.set_defaults(log.log_opts,
                      default_log_levels=['amqplib=DEBUG',
-                                         'qpid.messaging=INFO',
-                                         'sqlalchemy=WARN',
-                                         'keystoneclient=INFO',
-                                         'stevedore=INFO',
                                          'eventlet.wsgi.server=DEBUG'
                                          ])
     if argv is None:
@@ -82,7 +71,6 @@ def prepare_service(argv=None):
     log.setup('worker')
 
 
-
-prepare_service()
-os_service.launch(CollectorService(cfg.CONF.host,
-                                       'worker')).wait()
+setup_service()
+os_service.launch(MyWorkerService(cfg.CONF.host,
+                                  'worker')).wait()
